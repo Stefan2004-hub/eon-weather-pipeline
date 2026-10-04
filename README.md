@@ -1,68 +1,53 @@
 # E.ON Energy Weather Intelligence Pipeline
 
-A modular Python data pipeline built using the **Medallion Architecture** (Bronze, Silver, Gold layers) designed to ingest real-time meteorological data, clean and transform it, aggregate business-level insights, and generate an executive report for grid load and renewable energy forecasting.
+A local Python weather pipeline for grid-load forecasting and renewable-generation planning. It retrieves an Open-Meteo forecast for Iași, cleans hourly weather data, calculates daily energy-relevant metrics, and produces an analyst-ready Markdown report.
 
-## 🏗️ Architecture Overview
+## Pipeline flow
 
 ```text
-[ Open-Meteo API ] 
-        │
-        ▼ (Raw JSON payload)
-   📁 Bronze Layer (Immutable historical raw storage)
-        │
-        ▼ (Parsing, cleaning, and schema enforcement)
-   📁 Silver Layer (Cleaned tabular data)
-        │
-        ▼ (Aggregation & Business metrics: Wind max, Avg Temp)
-   📁 Gold Layer (Analyst-ready daily summaries)
-        │
-        ▼
-   📄 Delivery Report (Markdown Analyst Summary)
-Bronze (data/bronze/): Stores raw, unmodified JSON responses directly fetched from the weather API along with a UTC execution timestamp.
+Open-Meteo forecast
+  -> Bronze: timestamped raw JSON
+  -> Silver: weather_cleaned.csv
+  -> Gold: weather_daily_summary.csv
+  -> Delivery: analyst_report.md
+```
 
-Silver (data/silver/): Parses the hourly forecast streams, normalizes columns, drops nulls, and persists a clean CSV dataset.
+Silver removes rows missing a timestamp, temperature, wind speed, or radiation. Gold retains the established calculations: daily average temperature, maximum wind speed, and summed direct radiation.
 
-Gold (data/gold/): Aggregates data by date—calculating peak wind speeds (crucial for wind turbine monitoring) and average temperatures/radiation (relevant for solar and grid heating load).
+## Setup and execution
 
-Delivery (data/analyst_report.md): Generates an executive summary markdown report featuring formatted tables ready for distribution to energy analysts.
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
-🚀 Quick Start Guide
-Prerequisites
-Make sure you have Python 3.10+ and uv installed on your system.
+```bash
+uv sync --all-groups
+cp .env.example .env
+uv run weather-pipeline run
+```
 
-1. Clone the Repository
-Bash
-git clone [https://github.com/your-username/eon-weather-pipeline.git](https://github.com/your-username/eon-weather-pipeline.git)
-cd eon-weather-pipeline
-2. Set Up the Environment & Dependencies
-Using uv to handle virtual environments and packages lightning-fast:
+Use `uv run weather-pipeline --help` to see available commands. `uv run python main.py` remains available as a compatibility entry point.
 
-Bash
-# Create a virtual environment
-uv venv
+## Configuration
 
-# Activate the virtual environment
-source .venv/bin/activate  # On Linux/macOS
-# .venv\Scripts\activate   # On Windows
+Configuration is read from environment variables or an optional `.env` file. Copy `.env.example` and adjust it locally; never commit `.env`.
 
-# Install required dependencies
-uv pip install -r requirements.txt
-3. Run the Pipeline
-Execute the main orchestrator script:
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `WEATHER_PIPELINE_API_BASE_URL` | Open-Meteo forecast URL | Forecast endpoint |
+| `WEATHER_PIPELINE_LATITUDE` / `LONGITUDE` | Iași coordinates | Requested location |
+| `WEATHER_PIPELINE_TIMEZONE` | `GMT` | Open-Meteo response timezone |
+| `WEATHER_PIPELINE_BRONZE_DIR` | `data/bronze` | Raw JSON output directory |
+| `WEATHER_PIPELINE_SILVER_DIR` | `data/silver` | Clean CSV output directory |
+| `WEATHER_PIPELINE_GOLD_DIR` | `data/gold` | Daily summary output directory |
+| `WEATHER_PIPELINE_REPORT_PATH` | `data/analyst_report.md` | Markdown report location |
+| `WEATHER_PIPELINE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
 
-Python
-python main.py
-You will see confirmation logs as the data flows successfully through the Bronze, Silver, and Gold layers, ending with the generation of data/analyst_report.md.
+Relative output paths resolve from the project root, so the CLI can be invoked from another working directory. Bronze files are timestamped; Silver, Gold, and report outputs retain their current overwrite behavior.
 
-📁 Project Structure
-Plaintext
-eon-weather-pipeline/
-├── data/
-│   ├── bronze/      # Raw API JSON responses
-│   ├── silver/      # Cleaned tabular datasets (.csv)
-│   ├── gold/        # Aggregated business metrics (.csv)
-│   └── analyst_report.md  # Final generated output report
-│
-├── main.py          # End-to-end pipeline orchestrator
-├── requirements.txt # Project dependencies (requests, pandas, tabulate)
-└── README.md        # Project documentation
+## Development
+
+```bash
+uv run pytest
+uv run ruff check .
+```
+
+Tests mock Open-Meteo responses and never require internet access.
