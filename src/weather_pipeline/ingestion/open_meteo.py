@@ -9,7 +9,7 @@ from typing import Any
 import requests
 
 from weather_pipeline.config import Settings
-from weather_pipeline.logging import with_context
+from weather_pipeline.logging import ContextAdapter, with_context
 from weather_pipeline.storage import write_json
 
 
@@ -17,7 +17,7 @@ class IngestionError(RuntimeError):
     """Raised when the Open-Meteo response cannot be retrieved or decoded."""
 
 
-def extract_weather(settings: Settings, logger) -> Path:
+def extract_weather(settings: Settings, logger: ContextAdapter) -> Path:
     """Fetch one forecast response and save its unmodified payload as Bronze JSON."""
 
     stage_logger = with_context(logger, stage="bronze")

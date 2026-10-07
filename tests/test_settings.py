@@ -32,6 +32,30 @@ def test_settings_accept_environment_overrides(
     assert settings.bronze_dir == tmp_path / "data/bronze"
 
 
+def test_settings_load_dotenv_file_and_resolve_relative_paths(tmp_path: Path) -> None:
+    dotenv_file = tmp_path / ".env"
+    dotenv_file.write_text(
+        "\n".join(
+            [
+                "WEATHER_PIPELINE_LATITUDE=44.4268",
+                "WEATHER_PIPELINE_LONGITUDE=26.1025",
+                "WEATHER_PIPELINE_TIMEZONE=Europe/Bucharest",
+                "WEATHER_PIPELINE_BRONZE_DIR=output/bronze",
+                "WEATHER_PIPELINE_LOG_LEVEL=debug",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    settings = Settings(project_root=tmp_path, _env_file=dotenv_file)
+
+    assert settings.latitude == 44.4268
+    assert settings.longitude == 26.1025
+    assert settings.timezone == "Europe/Bucharest"
+    assert settings.bronze_dir == tmp_path / "output/bronze"
+    assert settings.log_level == "DEBUG"
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

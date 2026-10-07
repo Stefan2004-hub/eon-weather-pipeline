@@ -36,7 +36,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         logging.getLogger(__name__).error("invalid configuration: %s", exc)
         return 2
     except Exception:
-        logging.getLogger(__name__).exception("pipeline execution failed")
         return 1
     return 0
 
