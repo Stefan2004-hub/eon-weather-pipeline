@@ -8,14 +8,14 @@ from pathlib import Path
 import pandas as pd
 
 from weather_pipeline.config import Settings
-from weather_pipeline.logging import with_context
+from weather_pipeline.logging import ContextAdapter, with_context
 
 
 class ReportingError(RuntimeError):
     """Raised when the analyst report cannot be generated."""
 
 
-def create_delivery_report(gold_file: Path, settings: Settings, logger) -> Path:
+def create_delivery_report(gold_file: Path, settings: Settings, logger: ContextAdapter) -> Path:
     """Create the existing Markdown executive summary from Gold CSV output."""
 
     stage_logger = with_context(logger, stage="reporting")

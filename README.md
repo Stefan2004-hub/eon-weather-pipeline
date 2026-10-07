@@ -48,6 +48,7 @@ Relative output paths resolve from the project root, so the CLI can be invoked f
 ```bash
 uv run pytest
 uv run ruff check .
+uv run ruff format --check .
 ```
 
 Tests mock Open-Meteo responses and never require internet access.

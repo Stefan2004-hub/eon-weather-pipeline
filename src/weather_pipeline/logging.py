@@ -7,6 +7,7 @@ from typing import Any
 
 _STANDARD_RECORD_ATTRIBUTES = set(logging.LogRecord("", 0, "", 0, "", (), None).__dict__)
 _STANDARD_RECORD_ATTRIBUTES.update({"asctime", "message"})
+_PIPELINE_HANDLER_ATTRIBUTE = "_weather_pipeline_handler"
 
 
 class ContextAdapter(logging.LoggerAdapter):
@@ -35,13 +36,25 @@ class KeyValueFormatter(logging.Formatter):
 
 
 def configure_logging(level: str) -> None:
-    """Configure the process logger once for human-readable contextual output."""
+    """Configure a pipeline-owned handler without discarding application handlers."""
 
-    handler = logging.StreamHandler()
-    handler.setFormatter(KeyValueFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
     root_logger = logging.getLogger()
-    root_logger.handlers.clear()
-    root_logger.addHandler(handler)
+    pipeline_handlers = [
+        handler
+        for handler in root_logger.handlers
+        if getattr(handler, _PIPELINE_HANDLER_ATTRIBUTE, False)
+    ]
+    if pipeline_handlers:
+        handler = pipeline_handlers[0]
+        for duplicate_handler in pipeline_handlers[1:]:
+            root_logger.removeHandler(duplicate_handler)
+            duplicate_handler.close()
+    else:
+        handler = logging.StreamHandler()
+        setattr(handler, _PIPELINE_HANDLER_ATTRIBUTE, True)
+        root_logger.addHandler(handler)
+
+    handler.setFormatter(KeyValueFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
     root_logger.setLevel(level)
 
 

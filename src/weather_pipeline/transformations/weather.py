@@ -9,14 +9,14 @@ from typing import Any
 import pandas as pd
 
 from weather_pipeline.config import Settings
-from weather_pipeline.logging import with_context
+from weather_pipeline.logging import ContextAdapter, with_context
 
 
 class TransformationError(RuntimeError):
     """Raised when a Bronze or Silver input cannot be transformed safely."""
 
 
-def create_silver_dataset(bronze_file: Path, settings: Settings, logger) -> Path:
+def create_silver_dataset(bronze_file: Path, settings: Settings, logger: ContextAdapter) -> Path:
     """Clean a Bronze payload into the existing Silver CSV schema."""
 
     stage_logger = with_context(logger, stage="silver")
@@ -37,14 +37,18 @@ def create_silver_dataset(bronze_file: Path, settings: Settings, logger) -> Path
         raise TransformationError(f"Bronze payload is missing hourly fields: {fields}")
 
     try:
-        dataframe = pd.DataFrame(
-            {
-                "time": pd.to_datetime(hourly["time"]),
-                "temperature_c": hourly["temperature_2m"],
-                "wind_speed_ms": hourly["wind_speed_10m"],
-                "direct_radiation": hourly["direct_radiation"],
-            }
-        ).dropna().reset_index(drop=True)
+        dataframe = (
+            pd.DataFrame(
+                {
+                    "time": pd.to_datetime(hourly["time"]),
+                    "temperature_c": hourly["temperature_2m"],
+                    "wind_speed_ms": hourly["wind_speed_10m"],
+                    "direct_radiation": hourly["direct_radiation"],
+                }
+            )
+            .dropna()
+            .reset_index(drop=True)
+        )
     except (TypeError, ValueError) as exc:
         raise TransformationError(f"Bronze hourly values cannot form a table: {exc}") from exc
 
@@ -54,7 +58,7 @@ def create_silver_dataset(bronze_file: Path, settings: Settings, logger) -> Path
     return silver_path
 
 
-def create_gold_summary(silver_file: Path, settings: Settings, logger) -> Path:
+def create_gold_summary(silver_file: Path, settings: Settings, logger: ContextAdapter) -> Path:
     """Aggregate the existing daily energy-relevant metrics into Gold CSV."""
 
     stage_logger = with_context(logger, stage="gold")
