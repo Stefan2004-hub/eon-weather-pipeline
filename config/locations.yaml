@@ -1,0 +1,26 @@
+locations:
+  - id: iasi
+    name: "Iași"
+    latitude: 47.1585
+    longitude: 27.6014
+    timezone: Europe/Bucharest
+  - id: bucharest
+    name: Bucharest
+    latitude: 44.4268
+    longitude: 26.1025
+    timezone: Europe/Bucharest
+  - id: cluj-napoca
+    name: Cluj-Napoca
+    latitude: 46.7712
+    longitude: 23.6236
+    timezone: Europe/Bucharest
+  - id: timisoara
+    name: Timișoara
+    latitude: 45.7489
+    longitude: 21.2087
+    timezone: Europe/Bucharest
+  - id: constanta
+    name: Constanța
+    latitude: 44.1598
+    longitude: 28.6348
+    timezone: Europe/Bucharest
