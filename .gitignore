@@ -1,4 +1,5 @@
 .venv/
+.vscode/
 data/bronze/*
 data/silver/*
 data/gold/*

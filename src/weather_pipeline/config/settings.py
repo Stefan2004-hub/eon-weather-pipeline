@@ -24,6 +24,15 @@ class Settings(BaseSettings):
 
     project_root: Path = PROJECT_ROOT
     api_base_url: str = "https://api.open-meteo.com/v1/forecast"
+    archive_api_base_url: str = "https://archive-api.open-meteo.com/v1/archive"
+    locations_file: Path = Path("config/locations.yaml")
+    manifest_path: Path = Path("data/bronze/manifest.jsonl")
+    connect_timeout_seconds: float = Field(default=5, gt=0)
+    read_timeout_seconds: float = Field(default=30, gt=0)
+    max_retries: int = Field(default=3, ge=0, le=10)
+    retry_backoff_seconds: float = Field(default=1, gt=0, le=30)
+    max_retry_after_seconds: float = Field(default=300, gt=0, le=3600)
+    forecast_days: int = Field(default=7, ge=1, le=16)
     latitude: float = Field(default=47.1585, ge=-90, le=90)
     longitude: float = Field(default=27.6014, ge=-180, le=180)
     timezone: str = "GMT"
@@ -38,7 +47,15 @@ class Settings(BaseSettings):
     def resolve_project_root(cls, value: str | Path) -> Path:
         return Path(value).expanduser().resolve()
 
-    @field_validator("bronze_dir", "silver_dir", "gold_dir", "report_path", mode="before")
+    @field_validator(
+        "bronze_dir",
+        "silver_dir",
+        "gold_dir",
+        "report_path",
+        "locations_file",
+        "manifest_path",
+        mode="before",
+    )
     @classmethod
     def resolve_project_paths(cls, value: str | Path, info) -> Path:
         path = Path(value).expanduser()
@@ -47,7 +64,7 @@ class Settings(BaseSettings):
         project_root = Path(info.data.get("project_root", PROJECT_ROOT))
         return project_root / path
 
-    @field_validator("api_base_url")
+    @field_validator("api_base_url", "archive_api_base_url")
     @classmethod
     def validate_api_base_url(cls, value: str) -> str:
         parsed = urlparse(value)
