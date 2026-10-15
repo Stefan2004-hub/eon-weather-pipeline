@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+import re
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -12,6 +14,28 @@ from weather_pipeline.ingestion.models import Location
 
 class LocationConfigurationError(ValueError):
     """Raised when the locations catalogue is malformed."""
+
+
+_LOCATION_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
+
+
+def validate_location(location: Location, known_ids: set[str] | None = None) -> None:
+    """Validate a location regardless of whether it originated from YAML or code."""
+
+    if not _LOCATION_ID.fullmatch(location.id):
+        raise LocationConfigurationError(f"location has invalid id {location.id!r}")
+    if not location.name.strip():
+        raise LocationConfigurationError(f"location {location.id!r} has an empty name")
+    if not math.isfinite(location.latitude) or not math.isfinite(location.longitude):
+        raise LocationConfigurationError(f"location {location.id!r} has non-finite coordinates")
+    if not -90 <= location.latitude <= 90 or not -180 <= location.longitude <= 180:
+        raise LocationConfigurationError(f"location {location.id!r} has out-of-range coordinates")
+    if known_ids is not None and location.id in known_ids:
+        raise LocationConfigurationError(f"duplicate location id {location.id!r}")
+    try:
+        ZoneInfo(location.timezone)
+    except ZoneInfoNotFoundError as exc:
+        raise LocationConfigurationError(f"location {location.id!r} has invalid timezone") from exc
 
 
 def load_locations(path: Path) -> tuple[Location, ...]:
@@ -45,23 +69,10 @@ def load_locations(path: Path) -> tuple[Location, ...]:
             raise LocationConfigurationError(
                 f"location #{index} has invalid required fields"
             ) from exc
-        is_valid_id = location.id and all(
-            char.islower() or char.isdigit() or char == "-" for char in location.id
-        )
-        if not is_valid_id:
-            raise LocationConfigurationError(f"location #{index} has invalid id {location.id!r}")
-        if location.id in ids:
-            raise LocationConfigurationError(f"duplicate location id {location.id!r}")
-        if not -90 <= location.latitude <= 90 or not -180 <= location.longitude <= 180:
-            raise LocationConfigurationError(
-                f"location {location.id!r} has out-of-range coordinates"
-            )
         try:
-            ZoneInfo(location.timezone)
-        except ZoneInfoNotFoundError as exc:
-            raise LocationConfigurationError(
-                f"location {location.id!r} has invalid timezone"
-            ) from exc
+            validate_location(location, ids)
+        except LocationConfigurationError as exc:
+            raise LocationConfigurationError(f"location #{index}: {exc}") from exc
         ids.add(location.id)
         locations.append(location)
     return tuple(locations)

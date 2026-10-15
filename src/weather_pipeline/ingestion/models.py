@@ -40,9 +40,10 @@ class ExtractionResult:
     extraction_id: str
     location_id: str
     dataset: DatasetType
-    status: Literal["SUCCESS", "FAILED"]
+    status: Literal["SUCCESS", "FAILED", "FAILED_UNTRACEABLE"]
     bronze_path: Path | None
     error: str | None = None
+    metadata_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +61,7 @@ class IngestionRunSummary:
 
     @property
     def failed_count(self) -> int:
-        return sum(result.status == "FAILED" for result in self.results)
+        return sum(result.status != "SUCCESS" for result in self.results)
 
     @property
     def status(self) -> str:

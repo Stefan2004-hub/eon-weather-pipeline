@@ -16,7 +16,13 @@ class TransformationError(RuntimeError):
     """Raised when a Bronze or Silver input cannot be transformed safely."""
 
 
-def create_silver_dataset(bronze_file: Path, settings: Settings, logger: ContextAdapter) -> Path:
+def create_silver_dataset(
+    bronze_file: Path,
+    settings: Settings,
+    logger: ContextAdapter,
+    *,
+    output_path: Path | None = None,
+) -> Path:
     """Clean a Bronze payload into the existing Silver CSV schema."""
 
     stage_logger = with_context(logger, stage="silver")
@@ -40,7 +46,7 @@ def create_silver_dataset(bronze_file: Path, settings: Settings, logger: Context
         dataframe = (
             pd.DataFrame(
                 {
-                    "time": pd.to_datetime(hourly["time"]),
+                    "time": pd.to_datetime(hourly["time"], unit="s", utc=True),
                     "temperature_c": hourly["temperature_2m"],
                     "wind_speed_ms": hourly["wind_speed_10m"],
                     "direct_radiation": hourly["direct_radiation"],
@@ -52,13 +58,20 @@ def create_silver_dataset(bronze_file: Path, settings: Settings, logger: Context
     except (TypeError, ValueError) as exc:
         raise TransformationError(f"Bronze hourly values cannot form a table: {exc}") from exc
 
-    silver_path = settings.silver_dir / "weather_cleaned.csv"
+    silver_path = output_path or settings.silver_dir / "weather_cleaned.csv"
+    silver_path.parent.mkdir(parents=True, exist_ok=True)
     dataframe.to_csv(silver_path, index=False)
     stage_logger.info("saved cleaned dataset", extra={"path": silver_path, "rows": len(dataframe)})
     return silver_path
 
 
-def create_gold_summary(silver_file: Path, settings: Settings, logger: ContextAdapter) -> Path:
+def create_gold_summary(
+    silver_file: Path,
+    settings: Settings,
+    logger: ContextAdapter,
+    *,
+    output_path: Path | None = None,
+) -> Path:
     """Aggregate the existing daily energy-relevant metrics into Gold CSV."""
 
     stage_logger = with_context(logger, stage="gold")
@@ -78,7 +91,8 @@ def create_gold_summary(silver_file: Path, settings: Settings, logger: ContextAd
         )
         .reset_index()
     )
-    gold_path = settings.gold_dir / "weather_daily_summary.csv"
+    gold_path = output_path or settings.gold_dir / "weather_daily_summary.csv"
+    gold_path.parent.mkdir(parents=True, exist_ok=True)
     gold_dataframe.to_csv(gold_path, index=False)
     stage_logger.info("saved daily summary", extra={"path": gold_path, "rows": len(gold_dataframe)})
     return gold_path

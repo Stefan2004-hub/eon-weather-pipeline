@@ -15,7 +15,9 @@ class ReportingError(RuntimeError):
     """Raised when the analyst report cannot be generated."""
 
 
-def create_delivery_report(gold_file: Path, settings: Settings, logger: ContextAdapter) -> Path:
+def create_delivery_report(
+    gold_file: Path, settings: Settings, logger: ContextAdapter, *, output_path: Path | None = None
+) -> Path:
     """Create the existing Markdown executive summary from Gold CSV output."""
 
     stage_logger = with_context(logger, stage="reporting")
@@ -40,6 +42,8 @@ Generated on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 ---
 *Pipeline Status: SUCCESS*
 """
-    settings.report_path.write_text(report_content, encoding="utf-8")
-    stage_logger.info("generated analyst report", extra={"path": settings.report_path})
-    return settings.report_path
+    report_path = output_path or settings.report_path
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(report_content, encoding="utf-8")
+    stage_logger.info("generated analyst report", extra={"path": report_path})
+    return report_path

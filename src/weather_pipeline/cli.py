@@ -54,10 +54,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     if arguments.command == "run":
         try:
-            run_pipeline(settings)
+            artifacts = run_pipeline(settings)
         except Exception:
             return 1
-        return 0
+        return 0 if artifacts.ingestion.status == "COMPLETED" else 1
     if arguments.command == "ingest":
         return _run_ingest(settings, arguments)
     parser.error(f"unsupported command: {arguments.command}")
@@ -100,7 +100,7 @@ def _run_ingest(settings: Settings, arguments: argparse.Namespace) -> int:
         return 1
 
     failed_locations = [
-        result.location_id for result in summary.results if result.status == "FAILED"
+        result.location_id for result in summary.results if result.status != "SUCCESS"
     ]
     logging.getLogger(__name__).info(
         "ingestion %s: %s succeeded, %s failed%s",

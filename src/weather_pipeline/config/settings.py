@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     read_timeout_seconds: float = Field(default=30, gt=0)
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_backoff_seconds: float = Field(default=1, gt=0, le=30)
+    max_retry_after_seconds: float = Field(default=300, gt=0, le=3600)
     forecast_days: int = Field(default=7, ge=1, le=16)
     latitude: float = Field(default=47.1585, ge=-90, le=90)
     longitude: float = Field(default=27.6014, ge=-180, le=180)
